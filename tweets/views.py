@@ -68,12 +68,12 @@ class TweetDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 def like(request, pk):
     tweet = get_object_or_404(Tweet, pk=pk)
     Like.objects.get_or_create(user=request.user, tweet=tweet)
-    liked = True
+    is_liked = True
     likes_count = tweet.like_set.count()
     context = {
         "tweet_id": tweet.id,
         "likes_count": likes_count,
-        "liked": liked,
+        "is_liked": is_liked,
     }
     return JsonResponse(context)
 
@@ -84,11 +84,11 @@ def unlike(request, pk):
     tweet = get_object_or_404(Tweet, pk=pk)
     if like := Like.objects.filter(user=request.user, tweet=tweet):
         like.delete()
-    liked = False
+    is_liked = False
     likes_count = tweet.like_set.count()
     context = {
         "tweet_id": tweet.id,
         "likes_count": likes_count,
-        "liked": liked,
+        "is_liked": is_liked,
     }
     return JsonResponse(context)
