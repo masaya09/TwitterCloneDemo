@@ -5,7 +5,7 @@ from django.dispatch import receiver
 
 
 class User(AbstractUser):
-    email = models.EmailField(max_length=254)
+    email = models.EmailField(unique=True, max_length=254, verbose_name="Eメール")
 
     class Meta:
         db_table = "users"
@@ -17,8 +17,8 @@ class User(AbstractUser):
 
 
 class FriendShip(models.Model):
-    followee = models.ForeignKey(
-        User, related_name="followee", on_delete=models.CASCADE, verbose_name="フォロウィー"
+    following = models.ForeignKey(
+        User, related_name="following", on_delete=models.CASCADE, verbose_name="フォロー"
     )
     follower = models.ForeignKey(
         User, related_name="follower", on_delete=models.CASCADE, verbose_name="フォロワー"
@@ -26,16 +26,16 @@ class FriendShip(models.Model):
 
     class Meta:
         db_table = "friendship"
-        verbose_name = "フォロウィー・フォロワー"
-        verbose_name_plural = "フォロウィー・フォロワー"
+        verbose_name = "フォロー・フォロワー"
+        verbose_name_plural = "フォロー・フォロワー"
         constraints = [
             models.UniqueConstraint(
-                fields=["followee", "follower"], name="unique_friendship"
+                fields=["following", "follower"], name="unique_friendship"
             ),
         ]
 
     def __str__(self):
-        return f"{self.followee.username} : {self.follower.username}"
+        return f"{self.following.username} : {self.follower.username}"
 
 
 class Profile(models.Model):
