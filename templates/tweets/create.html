@@ -1,6 +1,36 @@
 {% extends "base.html" %}
+{% load django_bootstrap5 %}
 
 {% block title %}Tweet Create{% endblock title %}
 
 {% block content %}
+<div class="content-wrapper">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-6 offset-sm-3">
+        {% if messages %}
+          {% for message in messages %}
+            <li {% if message.tags %} class="{{ message.tags }}"{% endif %}>
+              {{ message }}
+            </li>
+          {% endfor %}
+        {% endif %}
+        <div class="card">
+          <div class="card-header">
+            <h4><b>ツイート</b></h4>
+          </div>
+          <div class="card-body">
+            <form method="post">
+              {% csrf_token %}
+              {% bootstrap_form form %}
+              <button type="submit" class="btn btn-outline-primary btn-block">
+                Tweet
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

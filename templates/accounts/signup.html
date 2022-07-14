@@ -1,6 +1,24 @@
 {% extends "base.html" %}
+{% load django_bootstrap5 %}
 
 {% block title %}Sign Up{% endblock title %}
 
 {% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-md-10 col-sm-12">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="card-title mb-3">サインアップ</h3>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% bootstrap_form form %}
+          <button type="submit" class="btn btn-primary btn-block">アカウント作成</button>
+        </form>
+      </div>
+      <div class="card-footer text-muted text-center">
+        すでにアカウントを持っている方はこちら： <a href="{% url 'accounts:login' %}">ログイン</a>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
