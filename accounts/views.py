@@ -2,7 +2,8 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.shortcuts import get_object_or_404, redirect, reverse, reverse_lazy
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
 from tweets.models import Tweet
@@ -38,7 +39,9 @@ class ProfileView(LoginRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
         ctx["following_num"] = (
-            FriendShip.objects.select_related("followee").filter(followee=user).count()
+            FriendShip.objects.select_related("following")
+            .filter(following=user)
+            .count()
         )
         ctx["follower_num"] = (
             FriendShip.objects.select_related("follower").filter(follower=user).count()
@@ -61,22 +64,22 @@ class ProfileEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 @login_required
 def follow(self, request, *args, **kwargs):
     follower = get_object_or_404(User, username=request.user.username)
-    followee = get_object_or_404(User, username=self.kwargs["username"])
-    if follower == followee:
+    following = get_object_or_404(User, username=self.kwargs["username"])
+    if follower == following:
         messages.warning(request, "自分をフォローすることはできません")
-    elif FriendShip.objects.filter(follower=follower, followee=followee).exists():
-        messages.warning(request, f"あなたはすでに{ followee.username }をフォローしています")
+    elif FriendShip.objects.filter(follower=follower, following=following).exists():
+        messages.warning(request, f"あなたはすでに{ following.username }をフォローしています")
     else:
-        FriendShip(follower=follower, followee=followee).save()
+        FriendShip(follower=follower, following=following).save()
     return redirect("home:home")
 
 
 @login_required
 def unfollow(self, request, *args, **kwargs):
     follower = get_object_or_404(User, username=request.user.username)
-    followee = get_object_or_404(User, username=self.kwargs["username"])
-    if FriendShip.objects.filter(follower=follower, followee=followee).exists():
-        FriendShip.objects.filter(follower=follower, followee=followee).delete()
+    following = get_object_or_404(User, username=self.kwargs["username"])
+    if FriendShip.objects.filter(follower=follower, following=following).exists():
+        FriendShip.objects.filter(follower=follower, following=following).delete()
     else:
         messages.warning(request, "無効な操作です")
     return redirect("home:home")
@@ -89,8 +92,8 @@ class FollowingListView(LoginRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
         ctx["following_list"] = FriendShip.objects.select_related(
-            "followee", "follower"
-        ).filter(followee=user)
+            "following", "follower"
+        ).filter(following=user)
         return ctx
 
 
@@ -101,9 +104,9 @@ class FollowerListView(LoginRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
         ctx["following_list"] = FriendShip.objects.select_related(
-            "followee", "follower"
-        ).filter(followee=user)
+            "following", "follower"
+        ).filter(following=user)
         ctx["follower_list"] = FriendShip.objects.select_related(
-            "followee", "follower"
+            "following", "follower"
         ).filter(follower=user)
         return ctx
