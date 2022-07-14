@@ -9,14 +9,16 @@ User = get_user_model()
 
 
 class HomeView(LoginRequiredMixin, TemplateView):
-    template_name = "home.html"
+    template_name = "home/home.html"
 
     def get_context_data(self, **kwargs):
         ctx = super(HomeView, self).get_context_data(**kwargs)
         user = self.request.user
-        ctx["tweets"] = Tweet.objects.select_related("user").all()
+        ctx["tweet_list"] = Tweet.objects.select_related("user").all()
         ctx["following_num"] = (
-            FriendShip.objects.select_related("followee").filter(followee=user).count()
+            FriendShip.objects.select_related("following")
+            .filter(following=user)
+            .count()
         )
         ctx["follower_num"] = (
             FriendShip.objects.select_related("follower").filter(follower=user).count()
@@ -25,6 +27,6 @@ class HomeView(LoginRequiredMixin, TemplateView):
             Like.objects.select_related("user")
             .select_related("user")
             .filter(user=user)
-            .values_list("post", flat=True)
+            .values_list("tweet", flat=True)
         )
         return ctx
