@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 
 from pathlib import Path
 
+from django.contrib import messages
+
 from . import local_settings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -37,6 +39,9 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
     "home.apps.HomeConfig",
     "tweets.apps.TweetsConfig",
+    # 3rd Party apps
+    "django_bootstrap5",
+    "widget_tweaks",
     # Django apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -130,8 +135,19 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# カスタムユーザー
 AUTH_USER_MODEL = "accounts.User"
 
+# ログイン・ログアウト
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "home:home"
 LOGOUT_REDIRECT_URL = "accounts:login"
+
+# メッセージタグにBootstrap5のclassを付与
+MESSAGE_TAGS = {
+    messages.ERROR: "alert alert-danger",
+    messages.WARNING: "alert alert-warning",
+    messages.SUCCESS: "alert alert-success",
+    messages.INFO: "alert alert-info",
+    messages.DEBUG: "alert alert-secondary",
+}
