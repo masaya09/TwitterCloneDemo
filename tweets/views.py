@@ -16,11 +16,11 @@ User = get_user_model()
 
 class TweetCreateView(LoginRequiredMixin, CreateView):
     form_class = TweetCreateForm
-    template_name = "tweet/create.html"
+    template_name = "tweets/create.html"
     success_url = reverse_lazy("home:home")
 
     def form_valid(self, form):
-        form.instance.author = self.request.user
+        form.instance.user = self.request.user
         messages.success(self.request, "ツイートが完了しました")
         return super().form_valid(form)
 
@@ -32,7 +32,7 @@ class TweetCreateView(LoginRequiredMixin, CreateView):
 class TweetEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Tweet
     form_class = TweetEditForm
-    template_name = "tweet/update.html"
+    template_name = "tweets/update.html"
     success_url = reverse_lazy("home:home")
 
     def form_valid(self, form):
@@ -50,7 +50,7 @@ class TweetEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
 class TweetDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Tweet
-    template_name = "tweet/delete.html"
+    template_name = "tweets/delete.html"
     success_url = reverse_lazy("home:home")
     success_message = "ツイートは削除されました"
 
