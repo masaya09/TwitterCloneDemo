@@ -8,7 +8,7 @@ from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
 from tweets.models import Tweet
 
-from .forms import SignUpForm
+from .forms import ProfileEditForm, SignUpForm
 from .models import FriendShip, Profile
 
 User = get_user_model()
@@ -32,25 +32,35 @@ class ProfileView(LoginRequiredMixin, ListView):
     template_name = "accounts/profile.html"
     fields = ("user", "bio")
 
+    def get_object(self):
+        target_user = get_object_or_404(User, username=self.kwargs["username"])
+        return target_user.profile
+
     def get_queryset(self):
         return Tweet.objects.select_related("user").filter(user=self.request.user)
 
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         user = self.request.user
-        ctx["following_num"] = (
+        context["following_num"] = (
+            FriendShip.objects.select_related("follower").filter(follower=user).count()
+        )
+        context["follower_num"] = (
             FriendShip.objects.select_related("following")
             .filter(following=user)
             .count()
         )
-        ctx["follower_num"] = (
-            FriendShip.objects.select_related("follower").filter(follower=user).count()
-        )
-        return ctx
+        return context
 
 
 class ProfileEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Profile
+    form_class = ProfileEditForm
+    template_name = "accounts/profile_edit.html"
+
+    def get_object(self):
+        target_user = get_object_or_404(User, username=self.kwargs["username"])
+        return target_user.profile
 
     def get_success_url(self):
         return reverse(
@@ -58,13 +68,14 @@ class ProfileEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         )
 
     def test_func(self):
-        return self.request.user.username == self.kwargs["username"]
+        profile = self.get_object()
+        return self.request.user == profile.user
 
 
 @login_required
-def follow(self, request, *args, **kwargs):
-    follower = get_object_or_404(User, username=request.user.username)
-    following = get_object_or_404(User, username=self.kwargs["username"])
+def follow(request, **kwargs):
+    follower = request.user
+    following = get_object_or_404(User, username=kwargs["username"])
     if follower == following:
         messages.warning(request, "自分をフォローすることはできません")
     elif FriendShip.objects.filter(follower=follower, following=following).exists():
@@ -75,9 +86,9 @@ def follow(self, request, *args, **kwargs):
 
 
 @login_required
-def unfollow(self, request, *args, **kwargs):
-    follower = get_object_or_404(User, username=request.user.username)
-    following = get_object_or_404(User, username=self.kwargs["username"])
+def unfollow(request, **kwargs):
+    follower = request.user
+    following = get_object_or_404(User, username=kwargs["username"])
     if FriendShip.objects.filter(follower=follower, following=following).exists():
         FriendShip.objects.filter(follower=follower, following=following).delete()
     else:
@@ -89,24 +100,38 @@ class FollowingListView(LoginRequiredMixin, TemplateView):
     template_name = "accounts/following_list.html"
 
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         user = self.request.user
-        ctx["following_list"] = FriendShip.objects.select_related(
-            "following", "follower"
-        ).filter(following=user)
-        return ctx
+        followings = (
+            FriendShip.objects.select_related("following", "follower")
+            .filter(follower=user)
+            .values_list("following")
+        )
+        context["following_list"] = User.objects.filter(id__in=followings)
+        print(followings)
+        return context
 
 
 class FollowerListView(LoginRequiredMixin, TemplateView):
     template_name = "accounts/follower_list.html"
 
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         user = self.request.user
-        ctx["following_list"] = FriendShip.objects.select_related(
-            "following", "follower"
-        ).filter(following=user)
-        ctx["follower_list"] = FriendShip.objects.select_related(
-            "following", "follower"
-        ).filter(follower=user)
-        return ctx
+        followings = (
+            FriendShip.objects.select_related("following", "follower")
+            .filter(follower=user)
+            .values_list("following")
+        )
+        context["following_list"] = User.objects.filter(id__in=followings)
+        followers = (
+            FriendShip.objects.select_related("following", "follower")
+            .filter(following=user)
+            .values_list("follower")
+        )
+        context["follower_list"] = User.objects.filter(id__in=followers)
+        print(followings)
+        print(followers)
+        print(context["following_list"])
+        print(context["follower_list"])
+        return context

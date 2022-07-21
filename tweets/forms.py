@@ -19,7 +19,7 @@ class TweetCreateForm(TweetBaseForm):
 
 
 class TweetEditForm(TweetBaseForm):
-    class Meta:
+    class Meta(TweetBaseForm.Meta):
         widgets = {
             "content": forms.Textarea(attrs={"rows": 5, "cols": 30}),
         }

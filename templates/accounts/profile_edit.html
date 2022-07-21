@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load django_bootstrap5 %}
 
-{% block title %}Tweet Create{% endblock %}
+{% block title %}Profile Edit{% endblock %}
 
 {% block content %}
 <div class="content-wrapper">
@@ -10,14 +10,14 @@
       <div class="col-sm-6 offset-sm-3">
         <div class="card">
           <div class="card-header">
-            <h4><b>ツイート作成</b></h4>
+            <h4><b>プロフィール編集</b></h4>
           </div>
           <div class="card-body">
             <form method="post">
               {% csrf_token %}
               {% bootstrap_form form %}
               <button type="submit" class="btn btn-outline-primary btn-block">
-                ツイート
+                更新
               </button>
             </form>
           </div>

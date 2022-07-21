@@ -12,21 +12,24 @@ class HomeView(LoginRequiredMixin, TemplateView):
     template_name = "home/home.html"
 
     def get_context_data(self, **kwargs):
-        ctx = super(HomeView, self).get_context_data(**kwargs)
+        context = super(HomeView, self).get_context_data(**kwargs)
         user = self.request.user
-        ctx["tweet_list"] = Tweet.objects.select_related("user").all()
-        ctx["following_num"] = (
+        context["tweet_list"] = Tweet.objects.select_related("user").all()
+        context["tweet_num"] = (
+            Tweet.objects.select_related("user").filter(user=user).count()
+        )
+        context["following_num"] = (
+            FriendShip.objects.select_related("follower").filter(follower=user).count()
+        )
+        context["follower_num"] = (
             FriendShip.objects.select_related("following")
             .filter(following=user)
             .count()
         )
-        ctx["follower_num"] = (
-            FriendShip.objects.select_related("follower").filter(follower=user).count()
-        )
-        ctx["liked_list"] = (
+        context["liked_list"] = (
             Like.objects.select_related("user")
             .select_related("user")
             .filter(user=user)
             .values_list("tweet", flat=True)
         )
-        return ctx
+        return context

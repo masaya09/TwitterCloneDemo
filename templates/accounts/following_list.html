@@ -1,6 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Following List{% endblock title %}
+{% block title %}Following List{% endblock %}
 
 {% block content %}
+<div class="content-wrapper">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-6 offset-sm-3">
+        <div class="table table-responsive">
+          <table id='following_list' class="table table-striped table-bordered table-hover">
+            <thead>
+              <tr>
+                <th class="text-center" style="width: 50%">ユーザー</th>
+                <th class="text-center" style="width: 50%">フォロー/アンフォロー</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for following in following_list %}
+                <tr class="text">
+                  <td class="text-center">{{ following.username }}</td>
+                  <td class="text-center align-middle">
+                    <form action="{% url 'accounts:unfollow' username=following.username %}" method="post">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-outline-danger btn-sm" name="button">
+                        アンフォロー
+                      </button>
+                      </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

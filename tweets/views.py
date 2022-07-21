@@ -32,7 +32,7 @@ class TweetCreateView(LoginRequiredMixin, CreateView):
 class TweetEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Tweet
     form_class = TweetEditForm
-    template_name = "tweets/update.html"
+    template_name = "tweets/edit.html"
     success_url = reverse_lazy("home:home")
 
     def form_valid(self, form):
@@ -45,7 +45,7 @@ class TweetEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
     def test_func(self):
         tweet = self.get_object()
-        return self.request.user == tweet.author
+        return self.request.user == tweet.user
 
 
 class TweetDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
@@ -60,7 +60,7 @@ class TweetDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
     def test_func(self):
         tweet = self.get_object()
-        return self.request.user == tweet.author
+        return self.request.user == tweet.user
 
 
 @login_required

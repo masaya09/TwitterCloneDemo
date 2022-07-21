@@ -19,7 +19,7 @@ class Tweet(models.Model):
         verbose_name_plural = "ツイート"
 
     def __str__(self):
-        return self.content
+        return f"{self.user.username} : {self.content}"
 
 
 class Like(models.Model):
@@ -36,4 +36,4 @@ class Like(models.Model):
         verbose_name_plural = "いいね"
 
     def __str__(self):
-        return f"{self.user.username}: {self.tweet.content}"
+        return f"{self.user.username} : {self.tweet.content}"

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load django_bootstrap5 %}
 
-{% block title %}Sign Up{% endblock title %}
+{% block title %}Sign Up{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -12,7 +12,7 @@
         <form method="post" novalidate>
           {% csrf_token %}
           {% bootstrap_form form %}
-          <button type="submit" class="btn btn-primary btn-block">アカウント作成</button>
+          <button type="submit" class="btn btn-outline-primary btn-block">アカウント作成</button>
         </form>
       </div>
       <div class="card-footer text-muted text-center">
