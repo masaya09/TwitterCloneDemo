@@ -1,11 +1,10 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
-from django.views.decorators.http import require_POST
+from django.views import View
 from django.views.generic import CreateView, DeleteView, UpdateView
 
 from .forms import TweetCreateForm, TweetEditForm
@@ -15,6 +14,11 @@ User = get_user_model()
 
 
 class TweetCreateView(LoginRequiredMixin, CreateView):
+    """
+    GET クエリ数:2
+    POST クエリ数:3
+    """
+
     form_class = TweetCreateForm
     template_name = "tweets/create.html"
     success_url = reverse_lazy("home:home")
@@ -30,7 +34,12 @@ class TweetCreateView(LoginRequiredMixin, CreateView):
 
 
 class TweetEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    model = Tweet
+    """
+    GET クエリ数:4 (2 duplicates)
+    POST クエリ数:5 (2 duplicates)
+    """
+
+    queryset = Tweet.objects.select_related("user")
     form_class = TweetEditForm
     template_name = "tweets/edit.html"
     success_url = reverse_lazy("home:home")
@@ -44,12 +53,23 @@ class TweetEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         return super().form_invalid(form)
 
     def test_func(self):
+        # getメソッド及びpostメソッドでも
+        # self:object = self.get_object()を呼び出すので、
+        # test_funcでself.get_object()を呼ぶのはクエリ的にはあまり良くない
+        # なので、編集ページに訪れた際、及び編集してpostした時に
+        # test_funcは呼ばれるので無駄なクエリが合計で2回入る
+        # https://github.com/django/django/blob/d526d1569ca4a1e62bb6a1dd779d2068766d348c/django/views/generic/edit.py#L195
         tweet = self.get_object()
         return self.request.user == tweet.user
 
 
 class TweetDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    model = Tweet
+    """
+    GET クエリ数:4 (2 duplicates)
+    POST クエリ数:7 (2 duplicates)
+    """
+
+    queryset = Tweet.objects.select_related("user")
     template_name = "tweets/delete.html"
     success_url = reverse_lazy("home:home")
     success_message = "ツイートは削除されました"
@@ -59,36 +79,41 @@ class TweetDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
     def test_func(self):
+        # updateと同様
         tweet = self.get_object()
         return self.request.user == tweet.user
 
 
-@login_required
-@require_POST
-def like(request, pk):
-    tweet = get_object_or_404(Tweet, pk=pk)
-    Like.objects.get_or_create(user=request.user, tweet=tweet)
-    is_liked = True
-    likes_count = tweet.like_set.count()
-    context = {
-        "tweet_id": tweet.id,
-        "likes_count": likes_count,
-        "is_liked": is_liked,
-    }
-    return JsonResponse(context)
+class LikeView(LoginRequiredMixin, View):
+    """
+    POST クエリ数:7
+    """
+
+    def post(self, request, *args, **kwargs):
+        tweet = get_object_or_404(Tweet, pk=kwargs["pk"])
+        Like.objects.get_or_create(user=self.request.user, tweet=tweet)
+        likes_count = tweet.likes.count()
+        context = {
+            "tweet_id": tweet.id,
+            "likes_count": likes_count,
+            "is_liked": True,
+        }
+        return JsonResponse(context)
 
 
-@login_required
-@require_POST
-def unlike(request, pk):
-    tweet = get_object_or_404(Tweet, pk=pk)
-    if like := Like.objects.filter(user=request.user, tweet=tweet):
-        like.delete()
-    is_liked = False
-    likes_count = tweet.like_set.count()
-    context = {
-        "tweet_id": tweet.id,
-        "likes_count": likes_count,
-        "is_liked": is_liked,
-    }
-    return JsonResponse(context)
+class UnLikeView(LoginRequiredMixin, View):
+    """
+    POST クエリ数:7
+    """
+
+    def post(self, request, *args, **kwargs):
+        tweet = get_object_or_404(Tweet, pk=kwargs["pk"])
+        if like := Like.objects.filter(user=self.request.user, tweet=tweet):
+            like.delete()
+        likes_count = tweet.likes.count()
+        context = {
+            "tweet_id": tweet.id,
+            "likes_count": likes_count,
+            "is_liked": False,
+        }
+        return JsonResponse(context)

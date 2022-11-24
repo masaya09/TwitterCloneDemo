@@ -1,8 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
 from django.views.generic import TemplateView
 
-from accounts.models import FriendShip
 from tweets.models import Like, Tweet
 
 User = get_user_model()
@@ -12,24 +12,17 @@ class HomeView(LoginRequiredMixin, TemplateView):
     template_name = "home/home.html"
 
     def get_context_data(self, **kwargs):
-        context = super(HomeView, self).get_context_data(**kwargs)
-        user = self.request.user
-        context["tweet_list"] = Tweet.objects.select_related("user").all()
-        context["tweet_num"] = (
-            Tweet.objects.select_related("user").filter(user=user).count()
+        context = super().get_context_data(**kwargs)
+        login_user = self.request.user
+        context["user"] = User.objects.annotate(
+            tweet_num=Count("tweets", distinct=True),
+            following_num=Count("followers", distinct=True),
+            follower_num=Count("following_users", distinct=True),
+        ).get(username=login_user.username)
+        context["tweet_list"] = (
+            Tweet.objects.select_related("user").prefetch_related("likes").all()
         )
-        context["following_num"] = (
-            FriendShip.objects.select_related("follower").filter(follower=user).count()
-        )
-        context["follower_num"] = (
-            FriendShip.objects.select_related("following")
-            .filter(following=user)
-            .count()
-        )
-        context["liked_list"] = (
-            Like.objects.select_related("user")
-            .select_related("user")
-            .filter(user=user)
-            .values_list("tweet", flat=True)
+        context["liked_list"] = Like.objects.filter(user=login_user).values_list(
+            "tweet", flat=True
         )
         return context

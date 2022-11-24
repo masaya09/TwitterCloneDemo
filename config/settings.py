@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
-
+# import os
 from pathlib import Path
 
 from django.contrib import messages
@@ -52,6 +52,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "middleware.sql_middleware.sql_printing_middleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -128,7 +129,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_URL = "static/"
-# STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
@@ -137,6 +138,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # カスタムユーザー
 AUTH_USER_MODEL = "accounts.User"
+
+# カスタム認証
+AUTHENTICATION_BACKENDS = [
+    "accounts.backends.EmailAuthenticationBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
 
 # ログイン・ログアウト
 LOGIN_URL = "accounts:login"
@@ -151,3 +158,19 @@ MESSAGE_TAGS = {
     messages.INFO: "alert alert-info",
     messages.DEBUG: "alert alert-secondary",
 }
+
+# カスタムミドルウェア
+# if os.environ.get("SQL_DEBUG", False):
+#     MIDDLEWARE += ("middleware.sql_middleware.sql_printing_middleware",)
+
+# debug_toolbar
+if DEBUG:
+
+    def show_toolbar(request):
+        return True
+
+    INSTALLED_APPS += ("debug_toolbar",)
+    MIDDLEWARE += ("debug_toolbar.middleware.DebugToolbarMiddleware",)
+    DEBUG_TOOLBAR_CONFIG = {
+        "SHOW_TOOLBAR_CALLBACK": show_toolbar,
+    }

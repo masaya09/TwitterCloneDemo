@@ -8,7 +8,7 @@
     <div class="row">
       <div class="col-sm-6 offset-sm-3">
         <div class="table table-responsive">
-          <table id='following_list' class="table table-striped table-bordered table-hover">
+          <table id='follower_list' class="table table-striped table-bordered table-hover">
             <thead>
               <tr>
                 <th class="text-center" style="width: 50%">ユーザー</th>
@@ -20,20 +20,22 @@
                 <tr class="text">
                   <td class="text-center">{{ follower.username }}</td>
                   <td class="text-center align-middle">
-                  {% if follower in following_list %}
-                    <form action="{% url 'accounts:unfollow' username=follower.username %}" method="post">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-outline-danger btn-sm" name="button">
-                        アンフォロー
-                      </button>
-                    </form>
-                  {% else %}
-                    <form action="{% url 'accounts:follow' username=follower.username %}" method="post">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-outline-primary btn-sm" name="button">
-                        フォロー
-                      </button>
-                    </form>
+                  {% if follower != request.user %}
+                    {% if follower in following_by_login_user %}
+                      <form action="{% url 'accounts:unfollow' follower.slug %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm" name="button">
+                          アンフォロー
+                        </button>
+                      </form>
+                    {% else %}
+                      <form action="{% url 'accounts:follow' follower.slug %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm" name="button">
+                          フォロー
+                        </button>
+                      </form>
+                    {% endif %}
                   {% endif %}
                   </td>
                 </tr>

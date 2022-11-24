@@ -20,12 +20,23 @@
                 <tr class="text">
                   <td class="text-center">{{ following.username }}</td>
                   <td class="text-center align-middle">
-                    <form action="{% url 'accounts:unfollow' username=following.username %}" method="post">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-outline-danger btn-sm" name="button">
-                        アンフォロー
-                      </button>
+                  {% if following != request.user %}
+                    {% if following in following_by_login_user %}
+                      <form action="{% url 'accounts:unfollow' following.slug %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm" name="button">
+                          アンフォロー
+                        </button>
                       </form>
+                    {% else %}
+                      <form action="{% url 'accounts:follow' following.slug %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm" name="button">
+                          フォロー
+                        </button>
+                      </form>
+                    {% endif %}
+                  {% endif %}
                   </td>
                 </tr>
               {% endfor %}

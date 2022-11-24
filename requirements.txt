@@ -1,6 +1,7 @@
-Django~=4.0
+Django==4.0.6
 black
 flake8
 isort
 django-widget-tweaks
 django-bootstrap5
+django-debug-toolbar

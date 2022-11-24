@@ -1,15 +1,16 @@
 from django.contrib import messages
-from django.contrib.auth import get_user_model, login
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, get_user_model, login
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
-from django.views.generic import CreateView, ListView, TemplateView, UpdateView
+from django.views import View
+from django.views.generic import CreateView, DetailView, UpdateView
 
-from tweets.models import Tweet
+from tweets.models import Like
 
 from .forms import ProfileEditForm, SignUpForm
-from .models import FriendShip, Profile
+from .models import FriendShip
 
 User = get_user_model()
 
@@ -21,117 +22,137 @@ class SignUpView(CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        user = self.object
+        email = form.cleaned_data["email"]
+        password = form.cleaned_data["password1"]
+        # authenticateでEmailAuthenticationBackendを呼び出している
+        # EmailAuthenticationBackendを用いなくても、
+        # USERNAME_FIELDにemailを設定していれば実際のところ必要ないが
+        # あえて記述し、email=emailと書けるようにしている
+        user = authenticate(self.request, email=email, password=password)
         login(self.request, user)
         return response
 
 
-class ProfileView(LoginRequiredMixin, ListView):
-    model = Tweet
-    context_object_name = "tweets"
-    template_name = "accounts/profile.html"
-    fields = ("user", "bio")
+class ProfileView(LoginRequiredMixin, DetailView):
+    """
+    GET クエリ数:7
+    """
 
-    def get_object(self):
-        target_user = get_object_or_404(User, username=self.kwargs["username"])
-        return target_user.profile
+    template_name = "accounts/profile.html"
 
     def get_queryset(self):
-        return Tweet.objects.select_related("user").filter(user=self.request.user)
+        return (
+            User.objects.filter(slug=self.kwargs["slug"])
+            .select_related("profile")
+            .annotate(
+                tweet_num=Count("tweets", distinct=True),
+                following_num=Count("followers", distinct=True),
+                follower_num=Count("following_users", distinct=True),
+            )
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.request.user
-        context["following_num"] = (
-            FriendShip.objects.select_related("follower").filter(follower=user).count()
+        context["tweets"] = self.object.tweets.prefetch_related("likes").all()
+        context["liked_list"] = Like.objects.filter(user=self.request.user).values_list(
+            "tweet", flat=True
         )
-        context["follower_num"] = (
-            FriendShip.objects.select_related("following")
-            .filter(following=user)
-            .count()
-        )
+        if self.request.user != self.object:
+            context["is_following"] = FriendShip.objects.filter(
+                following=self.object, follower=self.request.user
+            ).exists()
         return context
 
 
 class ProfileEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    model = Profile
+    queryset = User.objects.select_related("profile")
     form_class = ProfileEditForm
     template_name = "accounts/profile_edit.html"
 
     def get_object(self):
-        target_user = get_object_or_404(User, username=self.kwargs["username"])
+        target_user = get_object_or_404(self.queryset, slug=self.kwargs["slug"])
         return target_user.profile
 
     def get_success_url(self):
-        return reverse(
-            "accounts:profile", kwargs={"username": self.request.user.username}
-        )
+        return reverse("accounts:profile", kwargs={"slug": self.request.user.slug})
 
     def test_func(self):
-        profile = self.get_object()
-        return self.request.user == profile.user
+        return self.request.user.slug == self.kwargs["slug"]
 
 
-@login_required
-def follow(request, **kwargs):
-    follower = request.user
-    following = get_object_or_404(User, username=kwargs["username"])
-    if follower == following:
-        messages.warning(request, "自分をフォローすることはできません")
-    elif FriendShip.objects.filter(follower=follower, following=following).exists():
-        messages.warning(request, f"あなたはすでに{ following.username }をフォローしています")
-    else:
-        FriendShip(follower=follower, following=following).save()
-    return redirect("home:home")
+class FollowView(LoginRequiredMixin, View):
+    """
+    POST クエリ数:5
+    """
+
+    def post(self, request, *args, **kwargs):
+        follower = self.request.user
+        # self.kwargs["slug"]だとTypeError
+        # got an unexpected keyword argument 'slug'
+        following = get_object_or_404(User, slug=kwargs["slug"])
+        if follower == following:
+            messages.warning(self.request, "自分をフォローすることはできません")
+        elif FriendShip.objects.filter(follower=follower, following=following).exists():
+            messages.warning(self.request, f"あなたはすでに{ following.username }をフォローしています")
+        else:
+            FriendShip(follower=follower, following=following).save()
+        return redirect("home:home")
 
 
-@login_required
-def unfollow(request, **kwargs):
-    follower = request.user
-    following = get_object_or_404(User, username=kwargs["username"])
-    if FriendShip.objects.filter(follower=follower, following=following).exists():
-        FriendShip.objects.filter(follower=follower, following=following).delete()
-    else:
-        messages.warning(request, "無効な操作です")
-    return redirect("home:home")
+class UnFollowView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        follower = self.request.user
+        following = get_object_or_404(User, slug=kwargs["slug"])
+        if FriendShip.objects.filter(follower=follower, following=following).exists():
+            FriendShip.objects.filter(follower=follower, following=following).delete()
+        else:
+            messages.warning(self.request, "無効な操作です")
+        return redirect("home:home")
 
 
-class FollowingListView(LoginRequiredMixin, TemplateView):
+class FollowingListView(LoginRequiredMixin, DetailView):
+    """
+    GET クエリ数:5 (2 similar)
+    """
+
+    model = User
     template_name = "accounts/following_list.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.request.user
-        followings = (
-            FriendShip.objects.select_related("following", "follower")
-            .filter(follower=user)
+        following_users = FriendShip.objects.filter(follower=self.object).values_list(
+            "following"
+        )
+        context["following_list"] = User.objects.filter(id__in=following_users)
+        following_users_by_login_user = (
+            FriendShip.objects.select_related("follower")
+            .filter(follower=self.request.user)
             .values_list("following")
         )
-        context["following_list"] = User.objects.filter(id__in=followings)
-        print(followings)
+        context["following_by_login_user"] = User.objects.filter(
+            id__in=following_users_by_login_user
+        )
         return context
 
 
-class FollowerListView(LoginRequiredMixin, TemplateView):
+class FollowerListView(LoginRequiredMixin, DetailView):
+    """
+    GET クエリ数:5
+    """
+
+    model = User
     template_name = "accounts/follower_list.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.request.user
-        followings = (
-            FriendShip.objects.select_related("following", "follower")
-            .filter(follower=user)
-            .values_list("following")
-        )
-        context["following_list"] = User.objects.filter(id__in=followings)
-        followers = (
-            FriendShip.objects.select_related("following", "follower")
-            .filter(following=user)
-            .values_list("follower")
+        followers = FriendShip.objects.filter(following=self.object).values_list(
+            "follower"
         )
         context["follower_list"] = User.objects.filter(id__in=followers)
-        print(followings)
-        print(followers)
-        print(context["following_list"])
-        print(context["follower_list"])
+        following_users_by_login_user = FriendShip.objects.filter(
+            follower=self.request.user
+        ).values_list("following")
+        context["following_by_login_user"] = User.objects.filter(
+            id__in=following_users_by_login_user
+        )
         return context
