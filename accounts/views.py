@@ -16,6 +16,11 @@ User = get_user_model()
 
 
 class SignUpView(CreateView):
+    """
+    GET クエリ数:0
+    POST クエリ数: 11 session状況によって12
+    """
+
     form_class = SignUpForm
     template_name = "accounts/signup.html"
     success_url = reverse_lazy("home:home")
@@ -65,6 +70,11 @@ class ProfileView(LoginRequiredMixin, DetailView):
 
 
 class ProfileEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """
+    GET クエリ数:3
+    POST クエリ数:4
+    """
+
     queryset = User.objects.select_related("profile")
     form_class = ProfileEditForm
     template_name = "accounts/profile_edit.html"
@@ -100,6 +110,10 @@ class FollowView(LoginRequiredMixin, View):
 
 
 class UnFollowView(LoginRequiredMixin, View):
+    """
+    POST クエリ数:6
+    """
+
     def post(self, request, *args, **kwargs):
         follower = self.request.user
         following = get_object_or_404(User, slug=kwargs["slug"])

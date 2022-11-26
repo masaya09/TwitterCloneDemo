@@ -9,6 +9,10 @@ User = get_user_model()
 
 
 class HomeView(LoginRequiredMixin, TemplateView):
+    """
+    GET クエリ数:6
+    """
+
     template_name = "home/home.html"
 
     def get_context_data(self, **kwargs):

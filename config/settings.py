@@ -9,7 +9,6 @@ https://docs.djangoproject.com/en/4.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
-# import os
 from pathlib import Path
 
 from django.contrib import messages
@@ -52,7 +51,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "middleware.sql_middleware.sql_printing_middleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -160,11 +158,11 @@ MESSAGE_TAGS = {
 }
 
 # カスタムミドルウェア
-# if os.environ.get("SQL_DEBUG", False):
-#     MIDDLEWARE += ("middleware.sql_middleware.sql_printing_middleware",)
+if local_settings.SQL_DEBUG:
+    MIDDLEWARE += ("middleware.sql_middleware.sql_printing_middleware",)
 
 # debug_toolbar
-if DEBUG:
+if local_settings.SQL_DEBUG:
 
     def show_toolbar(request):
         return True
