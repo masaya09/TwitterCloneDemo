@@ -9,19 +9,19 @@ from django.views.generic import CreateView, DetailView, UpdateView
 
 from tweets.models import Like
 
-from .forms import ProfileEditForm, SignUpForm
+from .forms import ProfileEditForm, SignupForm
 from .models import FriendShip
 
 User = get_user_model()
 
 
-class SignUpView(CreateView):
+class SignupView(CreateView):
     """
     GET クエリ数:0
     POST クエリ数: 11 session状況によって12
     """
 
-    form_class = SignUpForm
+    form_class = SignupForm
     template_name = "accounts/signup.html"
     success_url = reverse_lazy("home:home")
 
