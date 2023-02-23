@@ -7,7 +7,7 @@ from .models import Profile
 User = get_user_model()
 
 
-class SignUpForm(UserCreationForm):
+class SignupForm(UserCreationForm):
     class Meta:
         model = User
         fields = ("email", "username")
