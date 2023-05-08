@@ -1,0 +1,20 @@
+<div class="card-header">
+  <h2 class="fs-2 fw-bolder text-center"><a href="{% url 'accounts:profile' user.slug %}">{{ user.username }}</a></h2>
+</div>
+<div class="card-body text-center">
+  <ul class="nav nav-tabs flex-column nav-start mb-3">
+    <li class="nav-item mb-3">
+      ツイート数<span>{{ user.tweet_num }}</span>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'accounts:following_list' user.slug %}" class="nav-link">
+        フォロー数<span>{{ user.following_num }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'accounts:follower_list' user.slug %}" class="nav-link">
+        フォロワー数<span>{{ user.follower_num }}</span>
+      </a>
+    </li>
+  </ul>
+</div>

@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.views import View
@@ -35,14 +35,24 @@ class TweetCreateView(LoginRequiredMixin, CreateView):
 
 class TweetEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     """
-    GET クエリ数:4 (2 duplicates)
-    POST クエリ数:5 (2 duplicates)
+    GET クエリ数:3
+    POST クエリ数:4
     """
 
     queryset = Tweet.objects.select_related("user")
     form_class = TweetEditForm
     template_name = "tweets/edit.html"
     success_url = reverse_lazy("home:home")
+
+    def get(self, request, *args, **kwargs):  # self.get_object()を呼び出すのを防ぐためにオーバーライド
+        return self.render_to_response(self.get_context_data())
+
+    def post(self, request, *args, **kwargs):  # self.get_object()を呼び出すのを防ぐためにオーバーライド
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
 
     def form_valid(self, form):
         messages.success(self.request, "更新が完了しました")
@@ -53,20 +63,14 @@ class TweetEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         return super().form_invalid(form)
 
     def test_func(self):
-        # getメソッド及びpostメソッドでも
-        # self:object = self.get_object()を呼び出すので、
-        # test_funcでself.get_object()を呼ぶのはクエリ的にはあまり良くない
-        # なので、編集ページに訪れた際、及び編集してpostした時に
-        # test_funcは呼ばれるので無駄なクエリが合計で2回入る
-        # https://github.com/django/django/blob/d526d1569ca4a1e62bb6a1dd779d2068766d348c/django/views/generic/edit.py#L195
-        tweet = self.get_object()
-        return self.request.user == tweet.user
+        self.object = self.get_object()
+        return self.request.user == self.object.user
 
 
 class TweetDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     """
-    GET クエリ数:4 (2 duplicates)
-    POST クエリ数:7 (2 duplicates)
+    GET クエリ数:3
+    POST クエリ数:6
     """
 
     queryset = Tweet.objects.select_related("user")
@@ -74,14 +78,22 @@ class TweetDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     success_url = reverse_lazy("home:home")
     success_message = "ツイートは削除されました"
 
-    def delete(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):  # self.get_object()を呼び出すのを防ぐためにオーバーライド
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
+    def post(self, request, *args, **kwargs):  # self.get_object()を呼び出すのを防ぐためにオーバーライド
+        return self.delete(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):  # self.get_object()を呼び出すのを防ぐためにオーバーライド
         messages.success(self.request, self.success_message)
-        return super().delete(request, *args, **kwargs)
+        success_url = self.get_success_url()
+        self.object.delete()
+        return HttpResponseRedirect(success_url)
 
     def test_func(self):
-        # updateと同様
-        tweet = self.get_object()
-        return self.request.user == tweet.user
+        self.object = self.get_object()
+        return self.request.user == self.object.user
 
 
 class LikeView(LoginRequiredMixin, View):

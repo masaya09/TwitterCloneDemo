@@ -5,9 +5,9 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views import View
-from django.views.generic import CreateView, DetailView, UpdateView
+from django.views.generic import CreateView, ListView, UpdateView, DetailView
 
-from tweets.models import Like
+from tweets.models import Tweet, Like
 
 from .forms import ProfileEditForm, SignUpForm
 from .models import FriendShip
@@ -15,7 +15,7 @@ from .models import FriendShip
 User = get_user_model()
 
 
-class SignUpView(CreateView):
+class SignupView(CreateView):
     """
     GET クエリ数:0
     POST クエリ数: 11 session状況によって12
@@ -38,15 +38,19 @@ class SignUpView(CreateView):
         return response
 
 
-class ProfileView(LoginRequiredMixin, DetailView):
+class ProfileView(LoginRequiredMixin, ListView):
     """
-    GET クエリ数:7
+    GET クエリ数:8 (ログインユーザーの場合7)
     """
 
     template_name = "accounts/profile.html"
+    model = Tweet
+    context_object_name = "tweets"
+    paginate_by = 6
+    queryset = Tweet.objects.select_related("user").prefetch_related("likes")
 
     def get_queryset(self):
-        return (
+        u_qs = (
             User.objects.filter(slug=self.kwargs["slug"])
             .select_related("profile")
             .annotate(
@@ -55,16 +59,18 @@ class ProfileView(LoginRequiredMixin, DetailView):
                 follower_num=Count("following_users", distinct=True),
             )
         )
+        self.target_user = get_object_or_404(u_qs, slug=self.kwargs["slug"])
+        return self.queryset.filter(user=self.target_user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["tweets"] = self.object.tweets.prefetch_related("likes").all()
+        context["user"] = self.target_user
         context["liked_list"] = Like.objects.filter(user=self.request.user).values_list(
             "tweet", flat=True
         )
-        if self.request.user != self.object:
+        if self.request.user != self.target_user:
             context["is_following"] = FriendShip.objects.filter(
-                following=self.object, follower=self.request.user
+                following=self.target_user, follower=self.request.user
             ).exists()
         return context
 
